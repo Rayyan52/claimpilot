@@ -30,9 +30,13 @@ def build_report(result: dict, decision_record: dict) -> bytes:
     pdf.cell(0, 8, "Gemini Reasoning Summary", ln=True)
     pdf.set_font("Helvetica", "", 10)
     gemini = result["gemini"]
-    pdf.multi_cell(0, 6, f"Summary: {gemini['summary']}")
-    pdf.multi_cell(0, 6, f"Consistency check: {gemini['consistency_flag']}")
-    pdf.multi_cell(0, 6, f"Recommendation: {gemini['recommendation']}")
+    for line in (
+        f"Summary: {gemini['summary']}",
+        f"Consistency check: {gemini['consistency_flag']}",
+        f"Recommendation: {gemini['recommendation']}",
+    ):
+        pdf.set_x(pdf.l_margin)
+        pdf.multi_cell(0, 6, line)
     pdf.ln(2)
 
     pdf.set_font("Helvetica", "B", 12)
