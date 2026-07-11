@@ -37,17 +37,21 @@ CATEGORICAL_COLS = [
 TARGET_COL = "fraud_reported"
 
 
-def find_csv():
+def find_data_file():
     matches = glob.glob(os.path.join(DATA_DIR, "**", "*.csv"), recursive=True)
+    matches += glob.glob(os.path.join(DATA_DIR, "**", "*.xlsx"), recursive=True)
     if not matches:
-        raise FileNotFoundError(f"No CSV found under {DATA_DIR}")
+        raise FileNotFoundError(f"No CSV or XLSX found under {DATA_DIR}")
     return matches[0]
 
 
 def load_data():
-    path = find_csv()
+    path = find_data_file()
     print(f"Loading {path}")
-    df = pd.read_csv(path)
+    if path.lower().endswith(".xlsx"):
+        df = pd.read_excel(path, sheet_name=0)
+    else:
+        df = pd.read_csv(path)
     df.columns = [c.strip() for c in df.columns]
     df = df.replace("?", "Unknown")
     df[TARGET_COL] = df[TARGET_COL].map({"Y": 1, "N": 0})
