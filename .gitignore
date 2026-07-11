@@ -1,0 +1,9 @@
+.env
+.streamlit/secrets.toml
+*.pyc
+__pycache__/
+kaggle.json
+access_token
+venv/
+.ipynb_checkpoints/
+.claude/
