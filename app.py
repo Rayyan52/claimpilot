@@ -17,6 +17,16 @@ from PIL import Image
 
 import joblib
 
+# Streamlit Cloud secrets don't auto-populate os.environ like a local .env
+# file does; bridge them here so gemini_helper's os.environ.get(...) works
+# the same way in both environments. Locally there's no secrets.toml at all,
+# so guard against that raising instead of just returning empty.
+try:
+    if "GEMINI_API_KEY" in st.secrets:
+        os.environ["GEMINI_API_KEY"] = st.secrets["GEMINI_API_KEY"]
+except Exception:
+    pass
+
 from gemini_helper import analyze_claim_text
 from report_generator import build_report
 from scripts.cnn_utils import make_gradcam_heatmap, overlay_heatmap
