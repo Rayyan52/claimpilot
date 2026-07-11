@@ -50,6 +50,59 @@ FIELD_GROUPS = {
     ],
 }
 
+# Pre-filled demo scenarios for live presentations — upload your own photo,
+# click a preset to fill everything else. See DEMO_GUIDE.md for the full
+# rationale and expected results of each scenario.
+DEMO_SCENARIOS = {
+    "A": {
+        "description": (
+            "Backed into a pole in the parking lot. Small scratch and dent on "
+            "the rear bumper, nothing else damaged."
+        ),
+        "numeric": {
+            "months_as_customer": 200, "age": 40, "policy_deductable": 1000,
+            "policy_annual_premium": 1200, "umbrella_limit": 0, "capital-gains": 0,
+            "capital-loss": 0, "incident_hour_of_the_day": 14,
+            "number_of_vehicles_involved": 1, "bodily_injuries": 0, "witnesses": 1,
+            "total_claim_amount": 3000, "injury_claim": 0, "property_claim": 500,
+            "vehicle_claim": 2500,
+        },
+        "categorical": {
+            "insured_sex": "FEMALE", "incident_severity": "Minor Damage",
+            "incident_type": "Parked Car", "authorities_contacted": "Police",
+            "property_damage": "YES", "police_report_available": "YES",
+        },
+    },
+    "B": {
+        "description": (
+            "Just a tiny scratch on the bumper, nothing major. Someone must "
+            "have bumped it in a parking lot."
+        ),
+        "numeric": {
+            "months_as_customer": 8, "age": 28, "policy_deductable": 500,
+            "policy_annual_premium": 900, "umbrella_limit": 0, "capital-gains": 0,
+            "capital-loss": 0, "incident_hour_of_the_day": 2,
+            "number_of_vehicles_involved": 1, "bodily_injuries": 0, "witnesses": 0,
+            "total_claim_amount": 45000, "injury_claim": 0, "property_claim": 15000,
+            "vehicle_claim": 30000,
+        },
+        "categorical": {
+            "insured_sex": "MALE", "incident_severity": "Major Damage",
+            "incident_type": "Parked Car", "authorities_contacted": "Other",
+            "property_damage": "Unknown", "police_report_available": "Unknown",
+        },
+    },
+}
+
+
+def load_demo_scenario(name: str):
+    scenario = DEMO_SCENARIOS[name]
+    for col, val in scenario["numeric"].items():
+        st.session_state[f"num_{col}"] = float(val)
+    for col, val in scenario["categorical"].items():
+        st.session_state[f"cat_{col}"] = val
+    st.session_state["description_input"] = scenario["description"]
+
 st.set_page_config(page_title="ClaimPilot", page_icon="🚗", layout="wide")
 
 
@@ -89,6 +142,17 @@ if "analyzed" not in st.session_state:
 
 st.subheader("1️⃣ Submit Claim")
 
+st.markdown("**🎬 Demo presets** — upload your own photo, then click a preset to fill the rest of the form.")
+dcol1, dcol2 = st.columns(2)
+with dcol1:
+    if st.button("🅰️ Load Scenario A — Consistent Claim", use_container_width=True):
+        load_demo_scenario("A")
+        st.rerun()
+with dcol2:
+    if st.button("🅱️ Load Scenario B — Flagged Claim", use_container_width=True):
+        load_demo_scenario("B")
+        st.rerun()
+
 with st.form("claim_form"):
     st.markdown("**📸 Damage Photo & Description**")
     pcol1, pcol2 = st.columns(2)
@@ -99,6 +163,7 @@ with st.form("claim_form"):
             "Claim description (free text)",
             height=120,
             placeholder="Describe what happened in the incident...",
+            key="description_input",
         )
 
     numeric_inputs = {}
@@ -116,10 +181,13 @@ with st.form("claim_form"):
                             min_value=float(lo),
                             max_value=float(hi),
                             value=float((lo + hi) / 2),
+                            key=f"num_{col}",
                         )
                     else:
                         options = form_schema["categorical_options"][col]
-                        categorical_inputs[col] = st.selectbox(field_label(col), options)
+                        categorical_inputs[col] = st.selectbox(
+                            field_label(col), options, key=f"cat_{col}"
+                        )
 
     analyze_clicked = st.form_submit_button("🔍 Analyze Claim", type="primary", use_container_width=True)
 
