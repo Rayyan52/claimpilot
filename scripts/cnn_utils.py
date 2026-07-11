@@ -38,11 +38,11 @@ def make_gradcam_heatmap(img_array, model, last_conv_layer_name=None):
 
 
 def overlay_heatmap(pil_img, heatmap, alpha=0.4):
-    import matplotlib.cm as cm
+    import matplotlib as mpl
     from PIL import Image
 
     heatmap = np.uint8(255 * heatmap)
-    jet = cm.get_cmap("jet")
+    jet = mpl.colormaps["jet"]
     jet_colors = jet(np.arange(256))[:, :3]
     jet_heatmap = jet_colors[heatmap]
     jet_heatmap = Image.fromarray(np.uint8(jet_heatmap * 255)).resize(pil_img.size)
