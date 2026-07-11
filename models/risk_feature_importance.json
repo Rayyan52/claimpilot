@@ -1,0 +1,12 @@
+{
+  "cat__incident_severity_Major Damage": 0.15231788079470193,
+  "cat__incident_severity_Total Loss": 0.03595080416272469,
+  "cat__incident_severity_Minor Damage": 0.02470604135694008,
+  "num__injury_claim": 0.01756994188403833,
+  "num__total_claim_amount": 0.016596837410460873,
+  "cat__insured_sex_FEMALE": 0.01538045681848894,
+  "num__age": 0.009839167455061481,
+  "num__property_claim": 0.0091093390998783,
+  "cat__property_damage_NO": 0.007811866468441652,
+  "num__umbrella_limit": 0.007649682389512047
+}

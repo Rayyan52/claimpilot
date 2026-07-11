@@ -1,0 +1,124 @@
+{
+  "numeric_cols": [
+    "months_as_customer",
+    "age",
+    "policy_deductable",
+    "policy_annual_premium",
+    "umbrella_limit",
+    "capital-gains",
+    "capital-loss",
+    "incident_hour_of_the_day",
+    "number_of_vehicles_involved",
+    "bodily_injuries",
+    "witnesses",
+    "total_claim_amount",
+    "injury_claim",
+    "property_claim",
+    "vehicle_claim"
+  ],
+  "categorical_cols": [
+    "insured_sex",
+    "incident_severity",
+    "incident_type",
+    "authorities_contacted",
+    "property_damage",
+    "police_report_available"
+  ],
+  "categorical_options": {
+    "insured_sex": [
+      "FEMALE",
+      "MALE"
+    ],
+    "incident_severity": [
+      "Major Damage",
+      "Minor Damage",
+      "Total Loss",
+      "Trivial Damage"
+    ],
+    "incident_type": [
+      "Multi-vehicle Collision",
+      "Parked Car",
+      "Single Vehicle Collision",
+      "Vehicle Theft"
+    ],
+    "authorities_contacted": [
+      "Ambulance",
+      "Fire",
+      "Other",
+      "Police"
+    ],
+    "property_damage": [
+      "NO",
+      "Unknown",
+      "YES"
+    ],
+    "police_report_available": [
+      "NO",
+      "Unknown",
+      "YES"
+    ]
+  },
+  "numeric_ranges": {
+    "months_as_customer": [
+      0.0,
+      479.0
+    ],
+    "age": [
+      19.0,
+      64.0
+    ],
+    "policy_deductable": [
+      500.0,
+      2000.0
+    ],
+    "policy_annual_premium": [
+      433.33,
+      2047.59
+    ],
+    "umbrella_limit": [
+      -1000000.0,
+      10000000.0
+    ],
+    "capital-gains": [
+      0.0,
+      100500.0
+    ],
+    "capital-loss": [
+      -111100.0,
+      0.0
+    ],
+    "incident_hour_of_the_day": [
+      0.0,
+      23.0
+    ],
+    "number_of_vehicles_involved": [
+      1.0,
+      4.0
+    ],
+    "bodily_injuries": [
+      0.0,
+      2.0
+    ],
+    "witnesses": [
+      0.0,
+      3.0
+    ],
+    "total_claim_amount": [
+      100.0,
+      114920.0
+    ],
+    "injury_claim": [
+      0.0,
+      21450.0
+    ],
+    "property_claim": [
+      0.0,
+      23670.0
+    ],
+    "vehicle_claim": [
+      70.0,
+      79560.0
+    ]
+  },
+  "test_auc": 0.7878091634004595
+}
