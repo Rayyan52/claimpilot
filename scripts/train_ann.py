@@ -16,6 +16,7 @@ from sklearn.compose import ColumnTransformer
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.models import Sequential
 
@@ -106,7 +107,11 @@ def main():
     feature_names = preprocessor.get_feature_names_out().tolist()
 
     model = build_ann(X_train_t.shape[1])
-    model.fit(X_train_t, y_train, validation_split=0.15, epochs=40, batch_size=16, verbose=2)
+    early_stop = EarlyStopping(monitor="val_AUC", mode="max", patience=8, restore_best_weights=True)
+    model.fit(
+        X_train_t, y_train, validation_split=0.15, epochs=40, batch_size=16,
+        verbose=2, callbacks=[early_stop],
+    )
 
     baseline_auc, importances = permutation_importance(model, X_test_t, y_test, feature_names)
     print(f"Test AUC: {baseline_auc:.3f}")
