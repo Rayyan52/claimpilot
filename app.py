@@ -34,7 +34,27 @@ from scripts.cnn_utils import make_gradcam_heatmap, overlay_heatmap
 MODELS_DIR = "models"
 LOG_PATH = "decision_log.csv"
 
+FIELD_GROUPS = {
+    "👤 Policy & Customer": [
+        "months_as_customer", "age", "insured_sex",
+        "policy_deductable", "policy_annual_premium", "umbrella_limit",
+        "capital-gains", "capital-loss",
+    ],
+    "🚦 Incident Details": [
+        "incident_type", "incident_severity", "incident_hour_of_the_day",
+        "number_of_vehicles_involved", "authorities_contacted",
+        "property_damage", "police_report_available", "bodily_injuries", "witnesses",
+    ],
+    "💰 Claim Amounts": [
+        "total_claim_amount", "injury_claim", "property_claim", "vehicle_claim",
+    ],
+}
+
 st.set_page_config(page_title="ClaimPilot", page_icon="🚗", layout="wide")
+
+
+def field_label(col: str) -> str:
+    return col.replace("_", " ").replace("-", " ").title()
 
 
 @st.cache_resource
@@ -56,44 +76,52 @@ def load_models():
 
 cnn_model, cnn_classes, ann_model, preprocessor, form_schema, feature_importance = load_models()
 
-st.title("🚗 ClaimPilot — AI Co-Pilot for Insurance Claims")
+st.title("🚗 ClaimPilot")
 st.caption(
-    "Upload a damage photo and claim details. AI analyzes damage severity, fraud risk, "
-    "and description consistency — a human adjuster makes the final call."
+    "AI Co-Pilot for Insurance Claims — upload a damage photo and claim details. "
+    "AI analyzes damage severity, fraud risk, and description consistency; "
+    "a human adjuster makes the final call."
 )
+st.divider()
 
 if "analyzed" not in st.session_state:
     st.session_state.analyzed = False
 
-st.header("1. Submit Claim")
-col1, col2 = st.columns(2)
+st.subheader("1️⃣ Submit Claim")
 
-with col1:
-    uploaded_image = st.file_uploader("Damage photo", type=["jpg", "jpeg", "png"])
-    description = st.text_area(
-        "Claim description (free text)",
-        height=150,
-        placeholder="Describe what happened in the incident...",
-    )
-
-with col2:
-    st.subheader("Claim details")
-    numeric_inputs = {}
-    for col in form_schema["numeric_cols"]:
-        lo, hi = form_schema["numeric_ranges"][col]
-        hi = hi if hi > lo else lo + 1
-        numeric_inputs[col] = st.number_input(
-            col.replace("_", " ").title(),
-            min_value=float(lo),
-            max_value=float(hi),
-            value=float((lo + hi) / 2),
+with st.form("claim_form"):
+    st.markdown("**📸 Damage Photo & Description**")
+    pcol1, pcol2 = st.columns(2)
+    with pcol1:
+        uploaded_image = st.file_uploader("Damage photo", type=["jpg", "jpeg", "png"])
+    with pcol2:
+        description = st.text_area(
+            "Claim description (free text)",
+            height=120,
+            placeholder="Describe what happened in the incident...",
         )
-    categorical_inputs = {}
-    for col in form_schema["categorical_cols"]:
-        options = form_schema["categorical_options"][col]
-        categorical_inputs[col] = st.selectbox(col.replace("_", " ").title(), options)
 
-analyze_clicked = st.button("🔍 Analyze Claim", type="primary")
+    numeric_inputs = {}
+    categorical_inputs = {}
+    for group_name, cols in FIELD_GROUPS.items():
+        with st.expander(group_name, expanded=True):
+            grid = st.columns(3)
+            for i, col in enumerate(cols):
+                with grid[i % 3]:
+                    if col in form_schema["numeric_cols"]:
+                        lo, hi = form_schema["numeric_ranges"][col]
+                        hi = hi if hi > lo else lo + 1
+                        numeric_inputs[col] = st.number_input(
+                            field_label(col),
+                            min_value=float(lo),
+                            max_value=float(hi),
+                            value=float((lo + hi) / 2),
+                        )
+                    else:
+                        options = form_schema["categorical_options"][col]
+                        categorical_inputs[col] = st.selectbox(field_label(col), options)
+
+    analyze_clicked = st.form_submit_button("🔍 Analyze Claim", type="primary", use_container_width=True)
 
 if analyze_clicked:
     if uploaded_image is None:
@@ -136,67 +164,84 @@ if analyze_clicked:
             "claim_fields": claim_fields,
         }
         st.session_state.pop("decision_record", None)
+        st.toast("Analysis complete — see the tabs below.", icon="✅")
 
 if st.session_state.analyzed:
     result = st.session_state.result
-    st.header("2. AI Findings")
+    st.divider()
+    st.subheader("2️⃣ Results")
 
-    fcol1, fcol2 = st.columns(2)
-    with fcol1:
-        st.subheader("Damage Assessment (CNN + Grad-CAM)")
-        st.image(
-            result["overlay_img"],
-            caption=f"Predicted: {result['severity']} ({result['confidence']:.0%} confidence)",
+    tab_findings, tab_decision, tab_report = st.tabs(
+        ["🔍 AI Findings", "🧑‍⚖️ Human Decision", "📄 Report"]
+    )
+
+    with tab_findings:
+        fcol1, fcol2 = st.columns(2)
+        with fcol1:
+            with st.container(border=True):
+                st.markdown("**Damage Assessment (CNN + Grad-CAM)**")
+                st.image(
+                    result["overlay_img"],
+                    caption=f"Predicted: {result['severity']} ({result['confidence']:.0%} confidence)",
+                    use_container_width=True,
+                )
+
+        with fcol2:
+            with st.container(border=True):
+                st.markdown("**Risk Assessment (ANN)**")
+                st.metric("Estimated fraud/review risk", f"{result['risk_score']:.0%}")
+                st.caption("Top contributing features (permutation importance)")
+                imp_df = pd.DataFrame(
+                    [{"feature": k.split("__", 1)[-1], "importance": v} for k, v in feature_importance.items()]
+                ).sort_values("importance", ascending=True)
+                st.bar_chart(imp_df.set_index("feature"))
+
+        with st.container(border=True):
+            st.markdown("**🧠 Gemini Reasoning Layer**")
+            gemini = result["gemini"]
+            flag_color = {
+                "consistent": "green",
+                "minor mismatch": "orange",
+                "significant mismatch": "red",
+            }.get(gemini["consistency_flag"], "gray")
+            st.markdown(f"**Summary:** {gemini['summary']}")
+            st.markdown(f"**Consistency check:** :{flag_color}[{gemini['consistency_flag']}]")
+            st.markdown(f"**Recommendation for adjuster:** {gemini['recommendation']}")
+
+    with tab_decision:
+        st.markdown("**Adjuster decision**")
+        decision = st.radio(
+            "Decision", ["Approve", "Reject", "Modify"], horizontal=True, label_visibility="collapsed"
         )
+        comment = st.text_area("Adjuster comment (optional for Approve, recommended for Reject/Modify)")
 
-    with fcol2:
-        st.subheader("Risk Assessment (ANN)")
-        st.metric("Estimated fraud/review risk", f"{result['risk_score']:.0%}")
-        st.caption("Top contributing features (permutation importance)")
-        imp_df = pd.DataFrame(
-            [{"feature": k.split("__", 1)[-1], "importance": v} for k, v in feature_importance.items()]
-        ).sort_values("importance", ascending=True)
-        st.bar_chart(imp_df.set_index("feature"))
+        if st.button("✅ Confirm Decision", type="primary"):
+            st.session_state.decision_record = {
+                "decision": decision,
+                "comment": comment,
+                "timestamp": datetime.now().isoformat(timespec="seconds"),
+            }
+            log_row = pd.DataFrame(
+                [
+                    {
+                        **st.session_state.decision_record,
+                        "severity": result["severity"],
+                        "risk_score": result["risk_score"],
+                    }
+                ]
+            )
+            log_row.to_csv(LOG_PATH, mode="a", header=not os.path.exists(LOG_PATH), index=False)
+            st.success(f"Decision recorded: {decision}")
 
-    st.subheader("Gemini Reasoning Layer")
-    gemini = result["gemini"]
-    flag_color = {
-        "consistent": "green",
-        "minor mismatch": "orange",
-        "significant mismatch": "red",
-    }.get(gemini["consistency_flag"], "gray")
-    st.markdown(f"**Summary:** {gemini['summary']}")
-    st.markdown(f"**Consistency check:** :{flag_color}[{gemini['consistency_flag']}]")
-    st.markdown(f"**Recommendation for adjuster:** {gemini['recommendation']}")
-
-    st.header("3. Human-in-the-Loop Decision")
-    decision = st.radio("Adjuster decision", ["Approve", "Reject", "Modify"], horizontal=True)
-    comment = st.text_area("Adjuster comment (optional for Approve, recommended for Reject/Modify)")
-
-    if st.button("✅ Confirm Decision"):
-        st.session_state.decision_record = {
-            "decision": decision,
-            "comment": comment,
-            "timestamp": datetime.now().isoformat(timespec="seconds"),
-        }
-        log_row = pd.DataFrame(
-            [
-                {
-                    **st.session_state.decision_record,
-                    "severity": result["severity"],
-                    "risk_score": result["risk_score"],
-                }
-            ]
-        )
-        log_row.to_csv(LOG_PATH, mode="a", header=not os.path.exists(LOG_PATH), index=False)
-        st.success(f"Decision recorded: {decision}")
-
-    if "decision_record" in st.session_state:
-        st.header("4. Download Report")
-        pdf_bytes = build_report(result, st.session_state.decision_record)
-        st.download_button(
-            "📄 Download PDF Report",
-            data=pdf_bytes,
-            file_name="claim_report.pdf",
-            mime="application/pdf",
-        )
+    with tab_report:
+        if "decision_record" in st.session_state:
+            pdf_bytes = build_report(result, st.session_state.decision_record)
+            st.download_button(
+                "📄 Download PDF Report",
+                data=pdf_bytes,
+                file_name="claim_report.pdf",
+                mime="application/pdf",
+                type="primary",
+            )
+        else:
+            st.info("Confirm a decision in the 🧑‍⚖️ Human Decision tab first to generate the report.")
